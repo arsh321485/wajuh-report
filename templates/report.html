@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wazuh Report — Charts & Summary</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background:#f7f8fb; color:#222; margin:0; padding:0; }
+    .container { width:95%; max-width:1200px; margin:30px auto; }
+    h1 { color:#0b5ed7; margin-bottom:4px; }
+    .top-bar {
+      display:flex; justify-content:space-between; align-items:center;
+      background:#fff; padding:10px 20px; box-shadow:0 2px 6px rgba(0,0,0,0.08);
+      border-radius:6px; margin-bottom:20px;
+    }
+    .btn { text-decoration:none; background:#0b5ed7; color:#fff; padding:6px 12px; border-radius:4px; margin-left:8px; font-size:14px; }
+    .btn:hover { background:#094ba5; }
+    .chart-card {
+      background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08);
+      padding:16px; margin-bottom:25px;
+    }
+    .chart-card h2 { margin-top:0; color:#333; }
+    .summary-table { width:100%; border-collapse:collapse; margin-top:10px; }
+    .summary-table th, .summary-table td {
+      border:1px solid #e1e1e1; padding:6px 10px; text-align:left;
+    }
+    .summary-table th { background:#f3f6ff; }
+    .empty-msg { text-align:center; padding:20px; color:#777; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- ===== Top bar ===== -->
+    <div class="top-bar">
+      <div>
+        <h1>Wazuh Report: Charts & Summary</h1>
+        <small>Source file: <strong>{{ filename }}</strong></small>
+      </div>
+      <div>
+        <a class="btn" href="{{ filtered_xlsx_url }}">⬇ Filtered Excel</a>
+        <a class="btn" href="{{ csv_url }}">⬇ Summary CSV</a>
+        <a class="btn" href="{{ xlsx_url }}">⬇ Summary XLSX</a>
+      </div>
+    </div>
+
+
+    <!-- ===== Chart 2 ===== -->
+    <div class="chart-card">
+      <h2><code>source.data.action</code> counts by <code>source.rule.level</code></h2>
+      <canvas id="chart2" height="140"></canvas>
+    </div>
+
+    <!-- ===== Chart 3 ===== -->
+    <div class="chart-card">
+      <h2>Unique <code>source.data.srcip</code> per <code>source.rule.level</code></h2>
+      <canvas id="chart3" height="140"></canvas>
+    </div>
+
+    <!-- ===== Summary Table ===== -->
+    <div class="chart-card">
+      <h2>Summary (top rules)</h2>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Rule ID</th><th>Description</th><th>Avg Level</th><th>Count</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const payload = {{ payload|tojson }};
+    console.log("payload", payload);
+
+
+
+    // ---------- Chart 2 ----------
+    const c2 = document.getElementById("chart2");
+    const lvls = payload.chart2?.levels || [];
+    const acts = payload.chart2?.actions || [];
+    if (lvls.length && acts.length) {
+      const colors=['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40'];
+      const datasets = acts.map((a,i)=>({
+        label:a,
+        data:payload.chart2.action_counts[a],
+        backgroundColor:colors[i%colors.length]
+      }));
+      new Chart(c2,{
+        type:'bar',
+        data:{labels:lvls,datasets},
+        options:{responsive:true,plugins:{tooltip:{mode:'index'}},scales:{y:{beginAtZero:true}}}
+      });
+    }
+
+    // ---------- Chart 3 ----------
+    const c3 = document.getElementById("chart3");
+    if (payload.chart3?.levels?.length) {
+      new Chart(c3,{
+        type:'bar',
+        data:{
+          labels:payload.chart3.levels,
+          datasets:[{
+            label:'Unique source.data.srcip count',
+            data:payload.chart3.values,
+            backgroundColor:'rgba(96, 105, 230, 0.7)',
+            borderColor:'rgba(96, 105, 230, 0.7)',
+            borderWidth:1
+          }]
+        },
+        options:{scales:{y:{beginAtZero:true}}}
+      });
+    }
+
+    // ---------- Summary table ----------
+    const body=document.getElementById("summaryBody");
+    const rows=payload.summary||[];
+    if(!rows.length){body.innerHTML="<tr><td colspan='4' class='empty-msg'>No summary rows</td></tr>";}
+    else{
+      body.innerHTML="";
+      rows.forEach(r=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`<td>${r.rule_id}</td><td>${r.description||""}</td><td>${r.avg_level.toFixed(2)}</td><td>${r.count}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    // ---------- Export Charts to PNG ----------
+    document.getElementById("exportChartsBtn").addEventListener("click",async()=>{
+      const charts=[{id:"chart1",name:"chart1.png"},{id:"chart2",name:"chart2.png"},{id:"chart3",name:"chart3.png"}];
+      for(const c of charts){
+        const el=document.getElementById(c.id); if(!el) continue;
+        const data=el.toDataURL("image/png");
+        await fetch("{{ url_for('save_chart') }}",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:c.name,data})
+        });
+      }
+      alert("Charts exported as PNG → see uploads folder.");
+    });
+  </script>
+</body>
+</html>

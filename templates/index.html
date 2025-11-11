@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wazuh Report — Upload Excel</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Upload Wazuh Excel report</h1>
+    <form id="uploadForm" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+      <label for="file">Choose Excel (.xlsx) file</label>
+      <input type="file" name="file" id="file" accept=".xlsx,.xls" required />
+      <button type="submit">Upload & Generate Report</button>
+    </form>
+    <p class="note">This will parse columns: <code>source.rule.id</code>, <code>source.rule.level</code>, <code>source.data.action</code>, <code>source.rule.description</code></p>
+  </div>
+  <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+</body>
+</html>

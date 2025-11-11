@@ -1,0 +1,8 @@
+body { font-family: Arial, Helvetica, sans-serif; background:#f7f8fb; color:#222; margin:0; padding:20px; }
+.container { max-width:1200px; margin:0 auto; }
+h1 { color:#0b5ed7; }
+form { background:#fff; padding:16px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+label { display:block; margin-bottom:8px; }
+input[type="file"] { display:block; margin-bottom:12px; }
+button { padding:8px 14px; background:#0b5ed7; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+.note { margin-top:12px; color:#555; }
